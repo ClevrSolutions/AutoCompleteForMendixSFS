@@ -387,5 +387,11 @@
             <category>Events</category>
             <description>The progress message to show when executing the onchange microflow</description>
         </property>
+        <property key="onChangeNanoflow" type="nanoflow" required="false">
+            <caption>On change</caption>
+            <category>Events</category>
+            <description>Run this nanoflow when the dropdown changes</description>
+            <returnType type="Void"/>
+        </property>
     </properties>
 </widget>

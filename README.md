@@ -85,7 +85,8 @@ Where you have a large number of available options for a reference selector, use
 ## Events
 - **On change**: The microflow that will be run when an item is selected or the control is cleared.
 - **Show Progress Bar**: Controls whether a progress bar should be displayed when executing the onchange microflow
-- **Progress Message**: The progress message to show when executing the onchange microflow
+- **Progress Message**: The progress message to show when executing the onchange microflow.
+- **On change nanoflow**: The nanoflow that will be run when an item is selected or the control is cleared.
 
 # Known Issues
 

@@ -14,14 +14,14 @@
     AutoComplete widget built using Select2 (https://select2.github.io/).
 */
 
-define( [
+define([
     "dojo/_base/declare",
     "mxui/widget/_WidgetBase",
     "dijit/_TemplatedMixin",
     "mxui/dom",
     "dojo/dom-class",
     "dojo/dom-construct",
-    "dojo/_base/array", 
+    "dojo/_base/array",
     "dojo/_base/lang",
     "dojo/_base/kernel",
     "dojo/date/locale",
@@ -30,20 +30,20 @@ define( [
     "dojo/text!AutoCompleteForMendix/widget/template/AutoCompleteForMendix.html",
     "select2/dist/css/select2.css",
     "./ui/AutoCompleteForMendix.css"
-], function(declare, _WidgetBase, _TemplatedMixin, dom, dojoClass, dojoConstruct, dojoArray, dojoLang, dojo, dojoLocale, $, _select2, widgetTemplate) {
+], function (declare, _WidgetBase, _TemplatedMixin, dom, dojoClass, dojoConstruct, dojoArray, dojoLang, dojo, dojoLocale, $, _select2, widgetTemplate) {
     "use strict";
 
     // Declare widget's prototype.
-    return declare("AutoCompleteForMendix.widget.AutoCompleteForMendix", [ _WidgetBase, _TemplatedMixin ], {
+    return declare("AutoCompleteForMendix.widget.AutoCompleteForMendix", [_WidgetBase, _TemplatedMixin], {
         // _TemplatedMixin will create our dom node using this HTML template.
         templateString: widgetTemplate,
 
         _$combo: null,
-        _isValid : true,
-        _displayAttributes : [],
-        _sortParams : [],
-        _queryAdapter : null,
-        _entity: null,  
+        _isValid: true,
+        _displayAttributes: [],
+        _sortParams: [],
+        _queryAdapter: null,
+        _entity: null,
         _reference: null,
         _constrainedByAssociation: null,
         _constrainedByReference: null,
@@ -51,12 +51,12 @@ define( [
         _attributeList: null,
         _displayTemplate: "",
         _selectedTemplate: "",
-        variableData : [],
-        _currentSearchTerm : "",
+        variableData: [],
+        _currentSearchTerm: "",
         _localObjectCache: null,
-        _updateCache : true,
-        _queryTimeout : null,
-        _currentReferenceAttributesLength : 0,
+        _updateCache: true,
+        _queryTimeout: null,
+        _currentReferenceAttributesLength: 0,
 
         // Internal variables. Non-primitives created in the prototype are shared between all widget instances.
         _handles: null,
@@ -68,7 +68,7 @@ define( [
         _currentValue: "",
 
         // dojo.declare.constructor is called to construct the widget instance. Implement to initialize non-primitive properties.
-        constructor: function() {
+        constructor: function () {
             // Uncomment the following line to enable debug messages
             //mx.logger.level(mx.logger.DEBUG);
             mx.logger.debug(this.id + ".constructor");
@@ -76,10 +76,10 @@ define( [
         },
 
         // dijit._WidgetBase.postCreate is called after constructing the widget. Implement to do extra setup work.
-        postCreate: function() {
-            mx.logger.debug(this.id + ".postCreate");            
+        postCreate: function () {
+            mx.logger.debug(this.id + ".postCreate");
 
-            $(document).on("touchstart",".select2", function(event){
+            $(document).on("touchstart", ".select2", function (event) {
                 $(event.target).trigger($.Event("click", {
                     pageX: event.originalEvent.touches[0].pageX,
                     pageY: event.originalEvent.touches[0].pageY,
@@ -100,48 +100,46 @@ define( [
             // issues with the sort parameters being persisted between widget instances mean we set the sort array to empty.
             this._sortParams = [];
             // create our sort order array
-            for(var i=0;i< this._sortContainer.length;i++) {
+            for (var i = 0; i < this._sortContainer.length; i++) {
                 var item = this._sortContainer[i];
-                this._sortParams.push([item.sortAttribute, item.sortOrder]); 
+                this._sortParams.push([item.sortAttribute, item.sortOrder]);
             }
 
             // make sure we only select the control for the current id or we'll overwrite previous instances
             var selector = '#' + this.id + ' select.autoComplete';
-            this._$combo = $(selector); 
+            this._$combo = $(selector);
 
             // validate the widget        
             this._isValid = this._validateWidget();
 
             // adjust the template based on the display settings.
-            if( this.showLabel ) {
-                if(this.formOrientation === "horizontal"){
+            if (this.showLabel) {
+                if (this.formOrientation === "horizontal") {
                     // width needs to be between 1 and 11
                     var comboLabelWidth = this.labelWidth < 1 ? 1 : this.labelWidth;
                     comboLabelWidth = this.labelWidth > 11 ? 11 : this.labelWidth;
 
-                    var comboControlWidth = 12 - comboLabelWidth,                    
+                    var comboControlWidth = 12 - comboLabelWidth,
                         comboLabelClass = 'col-sm-' + comboLabelWidth,
                         comboControlClass = 'col-sm-' + comboControlWidth;
 
                     dojoClass.add(this.autoCompleteLabel, comboLabelClass);
                     dojoClass.add(this.autoCompleteComboContainer, comboControlClass);
-                }
-                else{
+                } else {
                     dojoClass.add(this.autoCompleteMainContainer, "no-columns");
                 }
 
                 this.autoCompleteLabel.innerHTML = this.fieldCaption;
-            }
-            else {
+            } else {
                 dojoClass.remove(this.autoCompleteMainContainer, "form-group");
                 dojoConstruct.destroy(this.autoCompleteLabel);
-            } 
+            }
 
             this._initialiseQueryAdapter();
         },
 
         // mxui.widget._WidgetBase.update is called when context is changed or initialized. Implement to re-render and / or fetch data.
-        update: function(obj, callback) {
+        update: function (obj, callback) {
             mx.logger.debug(this.id + ".update");
             var self = this;
 
@@ -150,7 +148,7 @@ define( [
                     dojoClass.add(this.domNode, 'hidden');
                 }
 
-                if (callback && typeof callback === "function") {                
+                if (callback && typeof callback === "function") {
                     callback();
                 }
             } else {
@@ -161,11 +159,11 @@ define( [
                 this._resetSubscriptions();
                 this._updateRendering();
 
-                if( this.searchType === "microflowCache"){
+                if (this.searchType === "microflowCache") {
                     // execute our search MF and then initialise the combo when we return
-                    this._execMf(self._contextObj.getGuid(), self.cacheSearchMicroflow, function(objs){
+                    this._execMf(self._contextObj.getGuid(), self.cacheSearchMicroflow, function (objs) {
                         self._localObjectCache = objs;
-                        if(!self._initialized) {
+                        if (!self._initialized) {
                             self._initialiseControl(callback);
                         } else {
                             if (callback && typeof callback === "function") {
@@ -173,9 +171,8 @@ define( [
                             }
                         }
                     });
-                }
-                else{
-                    if(!this._initialized) {
+                } else {
+                    if (!this._initialized) {
                         this._initialiseControl(callback);
                     } else {
                         if (callback && typeof callback === "function") {
@@ -187,22 +184,22 @@ define( [
         },
 
         // mxui.widget._WidgetBase.enable is called when the widget should enable editing. Implement to enable editing if widget is input widget.
-        enable: function() {
+        enable: function () {
             mx.logger.debug(this.id + ".enable");
         },
 
         // mxui.widget._WidgetBase.enable is called when the widget should disable editing. Implement to disable editing if widget is input widget.
-        disable: function() {
+        disable: function () {
             mx.logger.debug(this.id + ".disable");
         },
 
         // mxui.widget._WidgetBase.resize is called when the page's layout is recalculated. Implement to do sizing calculations. Prefer using CSS instead.
-        resize: function(box) {
+        resize: function (box) {
             mx.logger.debug(this.id + ".resize");
         },
 
         // mxui.widget._WidgetBase.uninitialize is called when the widget is destroyed. Implement to do special tear-down work.
-        uninitialize: function() {
+        uninitialize: function () {
             mx.logger.debug(this.id + ".uninitialize");
             this._displayAttributes = [];
             this._sortParams = [];
@@ -215,35 +212,35 @@ define( [
         },
 
         // Attach events to HTML dom elements
-        _validateWidget: function() {
+        _validateWidget: function () {
             mx.logger.debug(this.id + "._validateWidget");
             var valid = true;
 
-            switch( this.searchType){
+            switch (this.searchType) {
                 case "xpath":
-                    if(!this.xpathSearchAttribute){
+                    if (!this.xpathSearchAttribute) {
                         valid = false;
                         mx.logger.error(this.id + ": 'Search Attribute' must be specified with search type XPath.");
                     }
                     break;
                 case "microflow":
-                    if(!this.searchMicroflow){
+                    if (!this.searchMicroflow) {
                         valid = false;
                         mx.logger.error(this.id + ": 'Search Microflow' must be specified with search type Microflow.");
                     }
 
-                    if(!this.searchStringAttribute){
+                    if (!this.searchStringAttribute) {
                         valid = false;
                         mx.logger.error(this.id + ": 'Search String Attribute' must be specified with search type Microflow ");
                     }
                     break;
                 case "microflowCache":
-                    if(!this.cacheSearchMicroflow){
+                    if (!this.cacheSearchMicroflow) {
                         valid = false;
                         mx.logger.error(this.id + ": 'Search Microflow' must be specified with search type Microflow (Cached).");
                     }
 
-                    if(!this.cacheSearchAttribute){
+                    if (!this.cacheSearchAttribute) {
                         valid = false;
                         mx.logger.error(this.id + ": 'Search Attribute' must be specified with search type Microflow (Cached)");
                     }
@@ -257,61 +254,73 @@ define( [
             return valid;
         },
 
-        _initialiseControl : function(callback){
+        _initialiseControl: function (callback) {
             var self = this;
             this._$combo.select2(this._getSelect2Options())
-            .on("select2:select", function(e) {
+                .on("select2:select", function (e) {
 
-                // set the value                
-                if( e.params && e.params.data ){                        
-                    var guid = e.params.data.id;                        
-                    self._contextObj.addReference(self._reference, guid);
-                    self._currentValue = e.params.data.text;
-                }
+                    // set the value                
+                    if (e.params && e.params.data) {
+                        var guid = e.params.data.id;
+                        self._contextObj.addReference(self._reference, guid);
+                        self._currentValue = e.params.data.text;
+                    }
 
-                // run the OC microflow if one has been configured.                   
-                if( self.onChangeMicroflow ) {
-                    self._execMf(self._contextObj.getGuid(), self.onChangeMicroflow, null, self.onChangeMicroflowShowProgress, self.onChangeMicroflowProgressMessage);
-                }
-            })
-            .on("select2:unselect", function(e) {
-                // set the value
-                if( e.params && e.params.data ){                        
-                    var guid = e.params.data.id;
-                    self._contextObj.removeReferences(self._reference, [guid]);
-                    self._currentValue = "";
-                }
+                    // run the OC microflow if one has been configured.                   
+                    if (self.onChangeMicroflow) {
+                        self._execMf(self._contextObj.getGuid(), self.onChangeMicroflow, null, self.onChangeMicroflowShowProgress, self.onChangeMicroflowProgressMessage);
+                    }
 
-                // run the OC microflow if one has been configured.                   
-                if( self.onChangeMicroflow ) {
-                    self._execMf(self._contextObj.getGuid(), self.onChangeMicroflow, null, self.onChangeMicroflowShowProgress, self.onChangeMicroflowProgressMessage);
-                }
-            })
-            .on("select2:closing",function(e){
-                self._$combo.select2('focus');                
-            })
-            .on('select2:open', function (e) {
-                if (self.preserveSearchValue) {
-                    // async trigger required in case the user re-oping before losing focus.
-                    setTimeout(function(){
-                        $('.select2-search input').val(self._currentValue).trigger('change').trigger("input");
-                    }, 0);
-                    
-                }
-            });
-            
+                    // Code snippet below has been added on October 11th, 2023 by Jeroen Appel. Goal; support on change nanoflow.
+                    // run the OC nanoflow if one has been configured.                   
+                    if (self.onChangeNanoflow) {
+                        self._execNf(self._contextObj.getGuid(), self.onChangeNanoflow);
+                    }
+                })
+                .on("select2:unselect", function (e) {
+                    // set the value
+                    if (e.params && e.params.data) {
+                        var guid = e.params.data.id;
+                        self._contextObj.removeReferences(self._reference, [guid]);
+                        self._currentValue = "";
+                    }
+
+                    // run the OC microflow if one has been configured.                   
+                    if (self.onChangeMicroflow) {
+                        self._execMf(self._contextObj.getGuid(), self.onChangeMicroflow, null, self.onChangeMicroflowShowProgress, self.onChangeMicroflowProgressMessage);
+                    }
+
+                    // Code snippet below has been added on October 11th, 2023 by Jeroen Appel. Goal; support on change nanoflow.
+                    // run the OC nanoflow if one has been configured.                   
+                    if (self.onChangeNanoflow) {
+                        self._execNf(self._contextObj.getGuid(), self.onChangeNanoflow);
+                    }
+                })
+                .on("select2:closing", function (e) {
+                    self._$combo.select2('focus');
+                })
+                .on('select2:open', function (e) {
+                    if (self.preserveSearchValue) {
+                        // async trigger required in case the user re-oping before losing focus.
+                        setTimeout(function () {
+                            $('.select2-search input').val(self._currentValue).trigger('change').trigger("input");
+                        }, 0);
+
+                    }
+                });
+
             this._$combo.data('select2')
-            .on('results:message', function () {
-                this.dropdown._positionDropdown();
-                this.dropdown._resizeDropdown();
-            });
+                .on('results:message', function () {
+                    this.dropdown._positionDropdown();
+                    this.dropdown._resizeDropdown();
+                });
 
-            if(this.openOnFocus){
+            if (this.openOnFocus) {
                 // on first focus (bubbles up to document), open the menu
                 $(document).on('focus', '.select2-selection.select2-selection--single', function (e) {
                     $(this).closest(".select2-container").siblings('select:enabled').select2('open');
                 });
-                
+
                 // steal focus during close - only capture once and stop propagation
                 this._$combo.on('select2:closing', function (e) {
                     $(e.target).data("select2").$selection.one('focus focusin', function (e) {
@@ -326,8 +335,8 @@ define( [
             // set the default value for the dropdown (if reference is already set)
             this._loadCurrentValue(callback);
         },
-        
-        _getSelect2Options : function(){
+
+        _getSelect2Options: function () {
             var self = this;
             var options = {
                 dataAdapter: this._queryAdapter,
@@ -335,9 +344,9 @@ define( [
                 width: '100%',
                 placeholder: this.placeholderText,
                 allowClear: this.allowClear,
-                selectOnClose : this.selectOnClose,
+                selectOnClose: this.selectOnClose,
                 language: {
-                    inputTooShort: function (params) { 
+                    inputTooShort: function (params) {
                         var min = params.minimum || 0;
                         var input = params.input || '';
                         var remain = min - input.length;
@@ -348,15 +357,15 @@ define( [
 
                         return message;
                     },
-                    noResults: function(){
+                    noResults: function () {
                         var retval = self.noResultsText;
 
-                        if(self.noResultsDisplayType === "button" && self.noResultsMicroflow){                                
-                            retval = dojoConstruct.create("a",{
-                                href:"#",
+                        if (self.noResultsDisplayType === "button" && self.noResultsMicroflow) {
+                            retval = dojoConstruct.create("a", {
+                                href: "#",
                                 innerHTML: self.noResultsText,
-                                'class':"btn btn-block btn-noResults",
-                                onclick:function(){
+                                'class': "btn btn-block btn-noResults",
+                                onclick: function () {
                                     self._contextObj.set(self.noResultsSearchStringAttribute, self._currentSearchTerm);
                                     self._execMf(self._contextObj.getGuid(), self.noResultsMicroflow);
                                     self._$combo.select2("close");
@@ -366,12 +375,12 @@ define( [
 
                         return retval;
                     },
-                    searching: function(){
+                    searching: function () {
                         return self.searchingText;
                     }
                 },
-                templateResult : function (item) {
-                    if(!item.id) {
+                templateResult: function (item) {
+                    if (!item.id) {
                         // return `text` for optgroup
                         return item.text;
                     }
@@ -382,40 +391,38 @@ define( [
 
             var parentSelector = this.parentSelector;
 
-            if(parentSelector){
+            if (parentSelector) {
                 options.dropdownParent = $(parentSelector);
             }
             return options;
         },
 
-        _updateControlDisplay : function(){
+        _updateControlDisplay: function () {
 
             // if data view is disabled
-            if(this.get("disabled")) {
-                this._$combo.prop('disabled',true);
-            }
-            else if (this._contextObj.isReadonlyAttr(this._reference)){
-                this._$combo.prop('disabled',true);
-            }
-            else {
-                    // fixed property gets checked first
-                    if(this.disabled){
-                        this._$combo.prop('disabled',true);
-                    } else{
-                        this._$combo.prop('disabled',false);
+            if (this.get("disabled")) {
+                this._$combo.prop('disabled', true);
+            } else if (this._contextObj.isReadonlyAttr(this._reference)) {
+                this._$combo.prop('disabled', true);
+            } else {
+                // fixed property gets checked first
+                if (this.disabled) {
+                    this._$combo.prop('disabled', true);
+                } else {
+                    this._$combo.prop('disabled', false);
+                }
+                // attribute property beats fixed property    
+                if (this.disabledViaAttribute) {
+                    if (this._contextObj.get(this.disabledViaAttribute)) {
+                        this._$combo.prop('disabled', true);
+                    } else {
+                        this._$combo.prop('disabled', false);
                     }
-                    // attribute property beats fixed property    
-                    if(this.disabledViaAttribute){
-                        if(this._contextObj.get(this.disabledViaAttribute) ){
-                            this._$combo.prop('disabled',true);
-                        } else{
-                            this._$combo.prop('disabled',false);
-                        }
-                    }
+                }
             }
 
             // fixed property gets checked first
-            if(this.visible){
+            if (this.visible) {
                 if (dojoClass.contains(this.domNode, 'hidden')) {
                     dojoClass.remove(this.domNode, 'hidden');
                 }
@@ -426,11 +433,11 @@ define( [
             }
 
             // attribute property beats fixed property
-            if(this.visibleViaAttribute ){
-                if(this._contextObj.get(this.visibleViaAttribute)){
+            if (this.visibleViaAttribute) {
+                if (this._contextObj.get(this.visibleViaAttribute)) {
                     if (dojoClass.contains(this.domNode, 'hidden')) {
                         dojoClass.remove(this.domNode, 'hidden');
-                    } 
+                    }
                 } else {
                     if (!dojoClass.contains(this.domNode, 'hidden')) {
                         dojoClass.add(this.domNode, 'hidden');
@@ -440,7 +447,7 @@ define( [
         },
 
         // Rerender the interface.
-        _updateRendering: function() {
+        _updateRendering: function () {
             mx.logger.debug(this.id + "._updateRendering");
             var self = this;
 
@@ -450,54 +457,50 @@ define( [
             // reset the display
             this._updateControlDisplay();
 
-            if( this.searchType === "microflowCache"  ){
+            if (this.searchType === "microflowCache") {
                 // this is an internal control of the refresh, which bypasses an update on attribute change
-                if( this._updateCache ){ 
+                if (this._updateCache) {
                     // this is an attribute based control of the refresh, which is governed by the app (if property is used)
-                    if(!this.refreshCacheViaAttribute || (this.refreshCacheViaAttribute && this._contextObj.get(this.refreshCacheViaAttribute) ) ){                    
+                    if (!this.refreshCacheViaAttribute || (this.refreshCacheViaAttribute && this._contextObj.get(this.refreshCacheViaAttribute))) {
                         // update our local cache of objects
-                        this._execMf(self._contextObj.getGuid(), self.cacheSearchMicroflow, function(objs){
+                        this._execMf(self._contextObj.getGuid(), self.cacheSearchMicroflow, function (objs) {
                             self._localObjectCache = objs;
                             self._updateCurrentSelection();
                         });
                     }
-                }
-                else{
+                } else {
                     // reset back to allow a refresh by default
-                    this._updateCache = true; 
+                    this._updateCache = true;
                 }
-            }
-            else{
+            } else {
                 this._updateCurrentSelection();
             }
-        },	
+        },
 
-        _updateCurrentSelection : function(){
+        _updateCurrentSelection: function () {
             //Also update the current selection
             var referencedObjectGuid = this._contextObj.get(this._reference);
 
-            if(referencedObjectGuid !== null && referencedObjectGuid !== "") {                        
+            if (referencedObjectGuid !== null && referencedObjectGuid !== "") {
                 mx.data.get({
                     guid: referencedObjectGuid,
-                    callback: dojoLang.hitch(this, function(obj){           
-                        if(obj){
-                            this._processResults([obj],this._formatCurrentValue, null);
-                        }
-                        else{
+                    callback: dojoLang.hitch(this, function (obj) {
+                        if (obj) {
+                            this._processResults([obj], this._formatCurrentValue, null);
+                        } else {
                             this._$combo.val(null).trigger("change");
                             this._currentValue = "";
                         }
                     })
                 });
-            }
-            else{
+            } else {
                 this._$combo.val(null).trigger("change");
                 this._currentValue = "";
             }
-        },	
+        },
 
         // Handle validations.
-        _handleValidation: function(validations) {
+        _handleValidation: function (validations) {
             mx.logger.debug(this.id + "._handleValidation");
             this._clearValidations();
 
@@ -510,27 +513,27 @@ define( [
                 if (message) {
                     this._addValidation(message);
 
-                    if(!this._hadValidationFeedback) {
+                    if (!this._hadValidationFeedback) {
                         this._hadValidationFeedback = true;
                         this._increaseValidationNotification();
                     }
 
-                    validation.removeAttribute(this._reference);                    
+                    validation.removeAttribute(this._reference);
                 }
             }
 
-            if(this._hadValidationFeedback && !message) {
+            if (this._hadValidationFeedback && !message) {
                 this._decreaseValidationNotification();
                 this._hadValidationFeedback = false;
             }
         },
 
         // Clear validations.
-        _clearValidations: function() {
+        _clearValidations: function () {
             mx.logger.debug(this.id + "._clearValidations");
-            if( this._$alertdiv ) {
+            if (this._$alertdiv) {
                 var selector = '#' + this.id;
-                var $formGroup = $(selector); 
+                var $formGroup = $(selector);
                 $formGroup.removeClass('has-error');
                 //this._$combo.parent().removeClass('has-error');
                 this._$alertdiv.remove();
@@ -538,18 +541,18 @@ define( [
         },
 
         // Add a validation.
-        _addValidation: function(message) {
+        _addValidation: function (message) {
             mx.logger.debug(this.id + "._addValidation");
             this._$alertdiv = $("<div></div>").addClass('alert alert-danger mx-validation-message').html(message);
             var selector = '#' + this.id;
-            var $formGroup = $(selector); 
+            var $formGroup = $(selector);
             $formGroup.addClass('has-error');
-            this._$combo.parent().append( this._$alertdiv );
+            this._$combo.parent().append(this._$alertdiv);
             //this._$combo.parent().addClass('has-error').append( this._$alertdiv );   
         },
 
 
-        _increaseValidationNotification : function() {
+        _increaseValidationNotification: function () {
             //increase notifications in case the widget is inside tab
             //Warning: This is not documented in official API and might break when the API changes. 
             if (this.validator) {
@@ -558,7 +561,7 @@ define( [
             }
         },
 
-        _decreaseValidationNotification : function() {
+        _decreaseValidationNotification: function () {
             //decrease notifications in case the widget is inside tab
             //Warning: This is not documented in official API and might break when the API changes. 
             if (this.validator) {
@@ -567,7 +570,7 @@ define( [
         },
 
         // Reset subscriptions.
-        _resetSubscriptions: function() {
+        _resetSubscriptions: function () {
             mx.logger.debug(this.id + "._resetSubscriptions");
             // Release handles on previous object, if any.
             if (this._handles) {
@@ -581,7 +584,7 @@ define( [
             if (this._contextObj) {
                 var objectHandle = this.subscribe({
                     guid: this._contextObj.getGuid(),
-                    callback: dojoLang.hitch(this, function(guid) {
+                    callback: dojoLang.hitch(this, function (guid) {
                         this._updateRendering();
                     })
                 });
@@ -589,7 +592,7 @@ define( [
                 var attrHandle = this.subscribe({
                     guid: this._contextObj.getGuid(),
                     attr: this._reference,
-                    callback: dojoLang.hitch(this, function(guid, attr, attrValue) {
+                    callback: dojoLang.hitch(this, function (guid, attr, attrValue) {
                         this._updateCache = false;
                         this._updateRendering();
                     })
@@ -601,12 +604,12 @@ define( [
                     callback: dojoLang.hitch(this, this._handleValidation)
                 });
 
-                this._handles = [ objectHandle, attrHandle, validationHandle ];
+                this._handles = [objectHandle, attrHandle, validationHandle];
             }
         },
 
         /* CUSTOM FUNCTIONS START HERE */
-        _initialiseQueryAdapter : function() {
+        _initialiseQueryAdapter: function () {
             var core = this;
 
             /*
@@ -615,72 +618,72 @@ define( [
 
             The following assignment creates a unique id (from http://stackoverflow.com/a/2117523)
             to use for the adapter.
-            */            
-            var adapterId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+            */
+            var adapterId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0,
+                    v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
 
             var adapterName = 'select2/data/queryAdapter_' + adapterId;
 
-            $.fn.select2.amd.define(adapterName,[
+            $.fn.select2.amd.define(adapterName, [
                 'select2/data/array',
                 'select2/utils',
                 'select2/data/minimumInputLength'
             ],
-            function (ArrayAdapter, Utils, MinimumInputLength) {
+                function (ArrayAdapter, Utils, MinimumInputLength) {
 
-                function QueryAdapter ($element, options) {
-                    QueryAdapter.__super__.constructor.call(this, $element, options);
-                }
-                Utils.Extend(QueryAdapter, ArrayAdapter);
+                    function QueryAdapter($element, options) {
+                        QueryAdapter.__super__.constructor.call(this, $element, options);
+                    }
+                    Utils.Extend(QueryAdapter, ArrayAdapter);
 
-                QueryAdapter.prototype.query = dojoLang.hitch(core, core._findMatches);
+                    QueryAdapter.prototype.query = dojoLang.hitch(core, core._findMatches);
 
-                return Utils.Decorate(QueryAdapter, MinimumInputLength);
-            });
+                    return Utils.Decorate(QueryAdapter, MinimumInputLength);
+                });
 
             this._queryAdapter = $.fn.select2.amd.require(adapterName);
         },
 
-        _findMatches : function findMatches(params, callback) {
+        _findMatches: function findMatches(params, callback) {
             var self = this;
 
-            function request () {       
+            function request() {
 
                 self._currentSearchTerm = params.term;
 
-                var searchCallback = 
-                    dojoLang.hitch(self, function(objs){
+                var searchCallback =
+                    dojoLang.hitch(self, function (objs) {
                         // only process the results if our search term hasn't changed since the query was executed
                         mx.logger.debug("_currentSearchTerm: " + self._currentSearchTerm);
                         mx.logger.debug("params.term: " + params.term);
-                        if( self._currentSearchTerm == params.term ){
+                        if (self._currentSearchTerm == params.term) {
                             var results = self._processResults(objs, self._formatResults, callback);
                         }
                     });
 
-                if( self.searchType === "xpath"){ 
+                if (self.searchType === "xpath") {
                     var xpath = '//' + self._entity + self.dataConstraint.replace('[%CurrentObject%]', self._contextObj.getGuid());
                     var method = self.xpathSearchMethod == "startswith" ? "starts-with" : self.xpathSearchMethod;
                     var term = params.term.replace(/'/g, "''");
 
-                    var searchConstraint = "[" + method + "(" + self.xpathSearchAttribute + ",'" + term + "')";    
+                    var searchConstraint = "[" + method + "(" + self.xpathSearchAttribute + ",'" + term + "')";
                     if (method == "starts-with") {
-                        searchConstraint += " or " + self.xpathSearchAttribute + "='" + term + "'";    
+                        searchConstraint += " or " + self.xpathSearchAttribute + "='" + term + "'";
                     }
                     searchConstraint += "]";
 
                     xpath += searchConstraint;
 
-                    if( self._constrainedByReference && self._constrainedByAssociationSource ){
+                    if (self._constrainedByReference && self._constrainedByAssociationSource) {
                         var constrainedByReferencedObjectGuid = self._contextObj.get(self._constrainedByReference);
 
-                        if( constrainedByReferencedObjectGuid ){
+                        if (constrainedByReferencedObjectGuid) {
                             var constrainedBy = "[" + self._constrainedByAssociationSource + "[id='" + constrainedByReferencedObjectGuid + "']]";
                             xpath += constrainedBy;
-                        }
-                        else{
+                        } else {
                             xpath += "[true()=false()]";
                         }
                     }
@@ -701,32 +704,29 @@ define( [
                         },
                         callback: searchCallback
                     });
-                }
-                else if(self.searchType === "microflow") {
+                } else if (self.searchType === "microflow") {
                     self._contextObj.set(self.searchStringAttribute, self._currentSearchTerm);
-                    self._execMf(self._contextObj.getGuid(), self.searchMicroflow, searchCallback);                    
-                }   
-                else if(self.searchType === "microflowCache") {
+                    self._execMf(self._contextObj.getGuid(), self.searchMicroflow, searchCallback);
+                } else if (self.searchType === "microflowCache") {
                     // filter my local cache and then process my results
                     var filteredObjs = [];
-                    for( var i = 0; i < self._localObjectCache.length; i++){
+                    for (var i = 0; i < self._localObjectCache.length; i++) {
                         var attributeValue = self._localObjectCache[i].get(self.cacheSearchAttribute);
-                        if(self.cacheSearchMethod == "startswith"){
+                        if (self.cacheSearchMethod == "startswith") {
                             // startsWith not supported in IE
                             //if( attributeValue.toLowerCase().startsWith(self._currentSearchTerm.toLowerCase()) ){
-                            if( attributeValue.toLowerCase().lastIndexOf(self._currentSearchTerm.toLowerCase(), 0) === 0 ){
+                            if (attributeValue.toLowerCase().lastIndexOf(self._currentSearchTerm.toLowerCase(), 0) === 0) {
                                 filteredObjs.push(self._localObjectCache[i]);
                             }
-                        }
-                        else{
-                            if( attributeValue.toLowerCase().indexOf(self._currentSearchTerm.toLowerCase()) >= 0 ){
+                        } else {
+                            if (attributeValue.toLowerCase().indexOf(self._currentSearchTerm.toLowerCase()) >= 0) {
                                 filteredObjs.push(self._localObjectCache[i]);
                             }
                         }
                     }
 
                     searchCallback(filteredObjs);
-                }             
+                }
             }
             if (this.searchDelay && this.searchDelay > 0) {
                 if (this._queryTimeout) {
@@ -735,12 +735,12 @@ define( [
 
                 this._queryTimeout = window.setTimeout(request, this.searchDelay);
             } else {
-                request(); 
+                request();
             }
             //request();
         },
 
-        _processResults : function (objs, formatResultsFunction, callback) {
+        _processResults: function (objs, formatResultsFunction, callback) {
             var self = this;
             this.variableData = []; // this will hold our variables
             var referenceAttributes = [];
@@ -760,7 +760,7 @@ define( [
                             id: i,
                             variable: self._attributeList[i].variableName,
                             value: value
-                        });                                                                        
+                        });
                     } else {
                         // add a placeholder for our reference variable value.
                         currentVariable.variables.push({
@@ -771,8 +771,8 @@ define( [
 
                         var split = self._attributeList[i].variableAttribute.split("/");
                         var refAttribute = {};
-                        for(var a in self._attributeList[i]){
-                            refAttribute[a]=self._attributeList[i][a];
+                        for (var a in self._attributeList[i]) {
+                            refAttribute[a] = self._attributeList[i][a];
                         }
 
                         refAttribute.attributeIndex = i;
@@ -784,28 +784,28 @@ define( [
                     }
                 }
 
-	// added below code to capture disable dropdown option value to list
-		if(self.disableDropdownOption){
-                  var disableOption =   availableObject.get(self.disableDropdownOption);
-				 currentVariable.variables.push({
-                            id: self._attributeList.length + 1,
-                            variable: self.disableDropdownOption,
-                            value: disableOption
-                        }); 
-                    }
-                self.variableData.push(currentVariable);                                        
-            });  
+                // added below code to capture disable dropdown option value to list
+                if (self.disableDropdownOption) {
+                    var disableOption = availableObject.get(self.disableDropdownOption);
+                    currentVariable.variables.push({
+                        id: self._attributeList.length + 1,
+                        variable: self.disableDropdownOption,
+                        value: disableOption
+                    });
+                }
+                self.variableData.push(currentVariable);
+            });
 
-            if( referenceAttributes.length > 0 ){
+            if (referenceAttributes.length > 0) {
                 // get values for our references
-                this._fetchReferences(referenceAttributes, formatResultsFunction, callback);                
-            } else{
+                this._fetchReferences(referenceAttributes, formatResultsFunction, callback);
+            } else {
                 // format the results
                 dojoLang.hitch(this, formatResultsFunction, callback)();
-            }                        
+            }
         },
 
-        _formatResults : function(callback){
+        _formatResults: function (callback) {
             // an array that will be populated with our results
             var matches = [],
                 resultDisplay = "",
@@ -814,10 +814,10 @@ define( [
             // default to selected template            
             var resultTemplate = this._displayTemplate || this._selectedTemplate;
 
-            for(var i = 0;i< this.variableData.length; i++){
+            for (var i = 0; i < this.variableData.length; i++) {
                 resultDisplay = this._mergeTemplate(this.variableData[i].variables, resultTemplate, false);
-                var div = dom.create("div",{
-                    "class" : "autoCompleteResult"
+                var div = dom.create("div", {
+                    "class": "autoCompleteResult"
                 });
                 div.innerHTML = resultDisplay;
                 selectedDisplay = this._mergeTemplate(this.variableData[i].variables, this._selectedTemplate, true);
@@ -826,26 +826,26 @@ define( [
                     id: this.variableData[i].guid,
                     text: selectedDisplay,
                     dropdownDisplay: div
-                }; 
-		if(this.disableDropdownOption){
-			var disable = false;
-			for(var j = 0; j < this.variableData[i].variables.length; j++)  {
-			if (this.variableData[i].variables[j].variable == this.disableDropdownOption){
-				disable = this.variableData[i].variables[j].value;
-				break; 
-				}
-			}
-			if(disable){
-				item.disabled = true;
-				if (this.disableToolTipMsg !== ""){
-				$(item).attr('title', this.disableToolTipMsg);	
-								
-				}
-								
-                        } else{
-                            item.disabled = false;
+                };
+                if (this.disableDropdownOption) {
+                    var disable = false;
+                    for (var j = 0; j < this.variableData[i].variables.length; j++) {
+                        if (this.variableData[i].variables[j].variable == this.disableDropdownOption) {
+                            disable = this.variableData[i].variables[j].value;
+                            break;
                         }
                     }
+                    if (disable) {
+                        item.disabled = true;
+                        if (this.disableToolTipMsg !== "") {
+                            $(item).attr('title', this.disableToolTipMsg);
+
+                        }
+
+                    } else {
+                        item.disabled = false;
+                    }
+                }
 
                 matches.push(item);
             }
@@ -858,36 +858,35 @@ define( [
             }
         },
 
-        _loadCurrentValue : function(callback){ 
+        _loadCurrentValue: function (callback) {
             // set the default value for the dropdown (if reference is already set)
             var referencedObjectGuid = this._contextObj.get(this._reference);
 
-            if(referencedObjectGuid !== null && referencedObjectGuid !== "") {                        
+            if (referencedObjectGuid !== null && referencedObjectGuid !== "") {
                 mx.data.get({
                     guid: referencedObjectGuid,
-                    callback: dojoLang.hitch(this, function(obj){    
-                        if(obj){
-                            this._processResults([obj],this._formatCurrentValue, callback);
-                        }                         
-                        else{
+                    callback: dojoLang.hitch(this, function (obj) {
+                        if (obj) {
+                            this._processResults([obj], this._formatCurrentValue, callback);
+                        } else {
                             if (callback && typeof callback === "function") {
                                 callback();
                             }
                         }
                     })
                 });
-            } else{                
+            } else {
                 if (callback && typeof callback === "function") {
                     callback();
                 }
             };
         },
 
-        _formatCurrentValue : function(callback){
+        _formatCurrentValue: function (callback) {
             var selectedDisplay = "";
 
             // we only want the first match (should never have multiple)
-            if( this.variableData && this.variableData.length > 0){
+            if (this.variableData && this.variableData.length > 0) {
                 var currentVariable = this.variableData[0];
 
                 selectedDisplay = this._mergeTemplate(currentVariable.variables, this._selectedTemplate, true);
@@ -926,12 +925,12 @@ define( [
                 returnvalue = this._parseDate(this._attributeList[i].datetimeformat, options, obj.get(attr));
             } else if (obj.isEnum(attr)) {
                 returnvalue = this._checkString(obj.getEnumCaption(attr, obj.get(attr)), escapeValues);
-            }  else if (obj.isNumeric(attr) || ( obj.isCurrency && obj.isCurrency(attr) ) || obj.getAttributeType(attr) === "AutoNumber") {
+            } else if (obj.isNumeric(attr) || (obj.isCurrency && obj.isCurrency(attr)) || obj.getAttributeType(attr) === "AutoNumber") {
                 numberOptions = {};
                 numberOptions.places = this._attributeList[i].decimalPrecision;
                 if (this._attributeList[i].groupDigits) {
                     numberOptions.locale = dojo.locale;
-                    numberOptions.groups = true; 
+                    numberOptions.groups = true;
                 }
 
                 returnvalue = mx.parser.formatValue(obj.get(attr), obj.getAttributeType(attr), numberOptions);
@@ -951,19 +950,19 @@ define( [
         _fetchReferences: function (referenceAttributes, formatResultsFunction, callback) {
             mx.logger.debug(this.id + "._fetchReferences");
             this._currentReferenceAttributesLength = referenceAttributes.length;
-             
+
             for (var i = 0; i < referenceAttributes.length; i++) {
                 var attributeData = referenceAttributes[i];
                 this._getReferencedObject(i, attributeData.referenceGuid, attributeData.referenceAttribute, attributeData.attributeIndex, attributeData.parentGuid, formatResultsFunction, callback);
             }
         },
 
-        _getReferencedObject : function(index, guid, referenceAttribute, attributeIndex, parentGuid, formatResultsFunction, callback){
+        _getReferencedObject: function (index, guid, referenceAttribute, attributeIndex, parentGuid, formatResultsFunction, callback) {
             var data = {
                 i: index,
                 attributeIndex: attributeIndex,
-                parentGuid : parentGuid,
-                referenceAttribute : referenceAttribute
+                parentGuid: parentGuid,
+                referenceAttribute: referenceAttribute
             };
 
             if (guid !== "") {
@@ -971,27 +970,26 @@ define( [
                     guid: guid,
                     callback: dojoLang.hitch(this, this._fetchReferenceCallback, data, formatResultsFunction, callback)
                 });
-            }
-            else{
-                this._fetchReferenceCallback(null,formatResultsFunction, callback, null);
+            } else {
+                this._fetchReferenceCallback(null, formatResultsFunction, callback, null);
             }
         },
 
-        _fetchReferenceCallback : function (data, formatResultsFunction, callback, obj) {
+        _fetchReferenceCallback: function (data, formatResultsFunction, callback, obj) {
             mx.logger.debug(this.id + "._fetchReferences get callback");
 
-            if(obj != null){
+            if (obj != null) {
 
-                if(data.referenceAttribute.indexOf("/") <= -1){
+                if (data.referenceAttribute.indexOf("/") <= -1) {
                     var value = this._fetchAttribute(obj, data.referenceAttribute, data.attributeIndex);
 
-                    var result = $.grep(this.variableData, function(e){ 
-                        return e.guid == data.parentGuid; 
+                    var result = $.grep(this.variableData, function (e) {
+                        return e.guid == data.parentGuid;
                     });
 
-                    if( result && result[0] ){
-                        var resultVariable = $.grep(result[0].variables, function(e){ return e.id == data.attributeIndex; });
-                        if( resultVariable && resultVariable[0]){
+                    if (result && result[0]) {
+                        var resultVariable = $.grep(result[0].variables, function (e) { return e.id == data.attributeIndex; });
+                        if (resultVariable && resultVariable[0]) {
                             resultVariable[0].value = value;
                         }
                     }
@@ -1001,8 +999,7 @@ define( [
                         // format our results
                         dojoLang.hitch(this, formatResultsFunction, callback)();
                     }
-                }
-                else{
+                } else {
                     var split = data.referenceAttribute.split("/");
                     var referenceGuid = obj.getReference(split[0]);
                     var referenceAttribute = split.slice(2).join("/");
@@ -1034,10 +1031,10 @@ define( [
             return datevalue;
         },
 
-        _mergeTemplate : function(variables, template, escapeTemplate) {
+        _mergeTemplate: function (variables, template, escapeTemplate) {
             var self = this;
 
-            if( escapeTemplate ){
+            if (escapeTemplate) {
                 template = dom.escapeString(template);
             }
 
@@ -1051,7 +1048,7 @@ define( [
 
         _execMf: function (guid, mf, cb, showProgress, message) {
             var self = this;
-            if (guid && mf) {                
+            if (guid && mf) {
                 var options = {
                     params: {
                         applyto: 'selection',
@@ -1068,13 +1065,34 @@ define( [
                     }
                 }
 
-                if(showProgress){                    
+                if (showProgress) {
                     options.progress = "modal";
                     options.progressMsg = message;
                 }
 
                 //mx.ui.action(mf,options, this);
                 mx.data.action(options);
+            }
+        },
+
+        // Code snippet below has been added on October 11th, 2023 by Jeroen Appel. Goal; support on change nanoflow.
+        _execNf: function (guid, nf, cb) {
+            if (guid && nf) {
+                var options = {
+                    nanoflow: nf,
+                    context: this.mxcontext,
+                    //guids: [guid],
+                    callback: function (objs) {
+                        if (cb) {
+                            cb(objs);
+                        }
+                    },
+                    error: function (e) {
+                        mx.logger.error('Error running Nanoflow: ' + e);
+                    }
+                }
+
+                mx.data.callNanoflow(options);
             }
         }
         /* CUSTOM FUNCTIONS END HERE */

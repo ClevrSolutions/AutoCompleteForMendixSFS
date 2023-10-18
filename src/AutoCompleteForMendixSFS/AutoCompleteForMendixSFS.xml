@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<widget id="AutoCompleteForMendix.widget.AutoCompleteForMendix" needsEntityContext="true" xmlns="http://www.mendix.com/widget/1.0/">
-    <name>AutoCompleteForMendix</name>
+<widget id="AutoCompleteForMendixSFS.widget.AutoCompleteForMendixSFS" needsEntityContext="true" xmlns="http://www.mendix.com/widget/1.0/">
+    <name>AutoCompleteForMendixSFS</name>
     <description>AutoComplete widget built using Select2 (https://select2.github.io/).</description>
 
     <icon>

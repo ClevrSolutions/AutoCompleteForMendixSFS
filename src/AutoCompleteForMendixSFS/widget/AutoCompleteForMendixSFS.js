@@ -27,14 +27,14 @@ define([
     "dojo/date/locale",
     "jquery",
     "select2",
-    "dojo/text!AutoCompleteForMendix/widget/template/AutoCompleteForMendix.html",
+    "dojo/text!AutoCompleteForMendixSFS/widget/template/AutoCompleteForMendixSFS.html",
     "select2/dist/css/select2.css",
-    "./ui/AutoCompleteForMendix.css"
+    "./ui/AutoCompleteForMendixSFS.css"
 ], function (declare, _WidgetBase, _TemplatedMixin, dom, dojoClass, dojoConstruct, dojoArray, dojoLang, dojo, dojoLocale, $, _select2, widgetTemplate) {
     "use strict";
 
     // Declare widget's prototype.
-    return declare("AutoCompleteForMendix.widget.AutoCompleteForMendix", [_WidgetBase, _TemplatedMixin], {
+    return declare("AutoCompleteForMendixSFS.widget.AutoCompleteForMendixSFS", [_WidgetBase, _TemplatedMixin], {
         // _TemplatedMixin will create our dom node using this HTML template.
         templateString: widgetTemplate,
 
